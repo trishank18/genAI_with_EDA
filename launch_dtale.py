@@ -2,7 +2,6 @@
 
 from pathlib import Path
 import sys
-import webbrowser
 
 
 DATA_FILE = Path(__file__).resolve().parent / "sales_data.csv"
@@ -34,35 +33,24 @@ def main() -> None:
     print(f"Loaded {len(sales_data):,} rows from {DATA_FILE.name}.")
 
     try:
-        # D-Tale starts a local web app and opens the default browser.
-        instance = dtale.show(
+        # Use an available port and keep the D-Tale server in this process.
+        # Foreground mode keeps the terminal active until the user presses Ctrl+C.
+        from dtale.app import find_free_port
+
+        port = find_free_port()
+        url = f"http://127.0.0.1:{port}"
+        print("Starting D-Tale; keep this terminal open while using the GUI.")
+        print(f"D-Tale URL: {url}")
+        dtale.show(
             sales_data,
             name="Sales Dataset",
             host="127.0.0.1",
-            open_browser=False,
+            port=port,
+            open_browser=True,
+            subprocess=False,
         )
     except Exception as error:
         raise RuntimeError(f"Could not launch D-Tale: {error}") from error
-
-    instance_url = getattr(instance, "_url", None)
-    if not instance_url:
-        raise RuntimeError("D-Tale started but did not provide an access URL.")
-
-    # Use loopback explicitly so the link works on this computer even when
-    # the machine hostname is not resolvable by the browser.
-    from urllib.parse import urlsplit
-
-    port = urlsplit(instance_url).port
-    if port is None:
-        raise RuntimeError(f"Could not determine D-Tale's port from {instance_url}.")
-    url = f"http://127.0.0.1:{port}"
-    browser_opened = webbrowser.open(url, new=2)
-
-    print("D-Tale launched successfully.")
-    print(f"Open the interactive EDA interface at: {url}")
-    if not browser_opened:
-        print("The browser did not open automatically; copy the URL above into it.")
-    print("Keep this Python session running while using D-Tale.")
 
 
 if __name__ == "__main__":
